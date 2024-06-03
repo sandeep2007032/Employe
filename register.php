@@ -32,24 +32,41 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             echo "Email is already registered. <a href='login.php'>Login here</a>";
         } else {
             $stmt->close();
-            // Hash the password
-            $hashed_password = password_hash($password, PASSWORD_DEFAULT);
-    
-            // Prepare and execute the SQL statement
-            $sql = "INSERT INTO users (first_name, last_name, email, mobile, password) VALUES (?, ?, ?, ?, ?)";
-    
+            // Check if the mobile number is already registered
+            $sql = "SELECT id FROM users WHERE mobile = ?";
             if ($stmt = $conn->prepare($sql)) {
-                $stmt->bind_param("sssss", $first_name, $last_name, $email, $mobile, $hashed_password);
+                $stmt->bind_param("s", $mobile);
+                $stmt->execute();
+                $stmt->store_result();
                 
-                if ($stmt->execute()) {
-                    // Redirect to login page after successful registration
-                    header("Location: login.php");
-                    exit();
+                if ($stmt->num_rows > 0) {
+                    // Mobile number is already registered
+                    $stmt->close();
+                    echo "Mobile number is already registered. <a href='login.php'>Login here</a>";
                 } else {
-                    echo "Error: " . $stmt->error;
+                    $stmt->close();
+                    // Hash the password
+                    $hashed_password = password_hash($password, PASSWORD_DEFAULT);
+            
+                    // Prepare and execute the SQL statement
+                    $sql = "INSERT INTO users (first_name, last_name, email, mobile, password) VALUES (?, ?, ?, ?, ?)";
+            
+                    if ($stmt = $conn->prepare($sql)) {
+                        $stmt->bind_param("sssss", $first_name, $last_name, $email, $mobile, $hashed_password);
+                        
+                        if ($stmt->execute()) {
+                            // Redirect to login page after successful registration
+                            header("Location: login.php");
+                            exit();
+                        } else {
+                            echo "Error: " . $stmt->error;
+                        }
+                        
+                        $stmt->close();
+                    } else {
+                        echo "Error preparing statement: " . $conn->error;
+                    }
                 }
-                
-                $stmt->close();
             } else {
                 echo "Error preparing statement: " . $conn->error;
             }
@@ -61,6 +78,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $conn->close();
 }
 ?>
+
 
 <!DOCTYPE html>
 <html>
